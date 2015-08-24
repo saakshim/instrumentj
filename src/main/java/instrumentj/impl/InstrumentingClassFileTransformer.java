@@ -44,7 +44,8 @@ public class InstrumentingClassFileTransformer implements ClassFileTransformer {
         "org/h2/",
         "org/objectweb/",
         "sun/",
-        "$"
+        "$",
+        "org/apache/commons/lang3/"
     };
 
     private static final Logger logger = Logger.getLogger(InstrumentingClassFileTransformer.class.getName());
@@ -77,12 +78,6 @@ public class InstrumentingClassFileTransformer implements ClassFileTransformer {
 
         logger.log(Level.FINEST, "Transformer active");
 
-        if (!SYSTEM_CLASS_LOADER_FILTER.accept(classLoader)) {
-            logger.log(Level.FINEST, "ClassLoader not filtered: " + classLoader);
-
-            return classFileBuffer;
-        }
-
         for (final String blackListEntry : blackListedPackages) {
             if (className.startsWith(blackListEntry)) {
                 logger.log(Level.FINEST, "Blacklisted package: " + className);
@@ -90,6 +85,24 @@ public class InstrumentingClassFileTransformer implements ClassFileTransformer {
                 return classFileBuffer;
             }
         }
+
+        if (className.startsWith("com/vmware/")) {
+			return instrument(className, classFileBuffer);
+		}
+
+        if (!SYSTEM_CLASS_LOADER_FILTER.accept(classLoader)) {
+            logger.log(Level.FINEST, "ClassLoader not filtered: " + classLoader);
+
+            return classFileBuffer;
+        }
+
+        return instrument(className, classFileBuffer);
+    }
+
+
+    private byte[] instrument(String className, byte[] classFileBuffer) {
+
+    	byte[] result = classFileBuffer;
 
         final ClassReader classReader = new ClassReader(classFileBuffer);
 
@@ -99,7 +112,9 @@ public class InstrumentingClassFileTransformer implements ClassFileTransformer {
 
         classReader.accept(probeClassVisitor, ClassReader.SKIP_DEBUG | ClassReader.EXPAND_FRAMES);
 
-        return classWriter.toByteArray();
+        result = classWriter.toByteArray();
+
+        return result;
 
     }
 }

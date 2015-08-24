@@ -24,6 +24,10 @@ public class SomeClass {
 	final String one;
 	final String two;
 
+	public void bMethod() {
+        System.out.println("bMethod");
+    }
+
     public SomeClass(String one, String two) {
         this.one = one;
         this.two = two;
@@ -33,10 +37,6 @@ public class SomeClass {
         System.out.println("aMethod");
 
         cMethod();
-    }
-
-    public void bMethod() {
-        System.out.println("bMethod");
     }
 
     public void cMethod() {
