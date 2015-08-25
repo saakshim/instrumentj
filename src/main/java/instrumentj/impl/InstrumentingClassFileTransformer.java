@@ -33,88 +33,88 @@ import org.objectweb.asm.ClassWriter;
  */
 public class InstrumentingClassFileTransformer implements ClassFileTransformer {
 
-    private static final String[] blackListedPackages = new String[] {
-        "com/sun/",
-        "groovy",
-        "instrumentj",
-        "java",
-        "jline/",
-        "org/codehaus/groovy/",
-        "org/fusesource/",
-        "org/h2/",
-        "org/objectweb/",
-        "sun/",
-        "$",
-        "org/apache/commons/lang3/"
-    };
+	private static final String[] blackListedPackages = new String[] {
+		"com/sun/",
+		"groovy",
+		"instrumentj",
+		"java",
+		"jline/",
+		"org/codehaus/groovy/",
+		"org/fusesource/",
+		"org/h2/",
+		"org/objectweb/",
+		"sun/",
+		"$",
+		"org/apache/commons/lang3/"
+	};
 
-    private static final Logger logger = Logger.getLogger(InstrumentingClassFileTransformer.class.getName());
+	private static final Logger logger = Logger.getLogger(InstrumentingClassFileTransformer.class.getName());
 
-    private static final ClassLoaderFilter SYSTEM_CLASS_LOADER_FILTER = new SystemClassLoaderFilter();
+	private static final ClassLoaderFilter SYSTEM_CLASS_LOADER_FILTER = new SystemClassLoaderFilter();
 
-    private final ProfilerController profilerController;
+	private final ProfilerController profilerController;
 
-    /**
-     *
-     * @param profilerController
-     */
-    public InstrumentingClassFileTransformer(final ProfilerController profilerController) {
-        this.profilerController = profilerController;
-    }
+	/**
+	 *
+	 * @param profilerController
+	 */
+	public InstrumentingClassFileTransformer(final ProfilerController profilerController) {
+		this.profilerController = profilerController;
+	}
 
-    @Override
-    public byte[] transform(
-            final ClassLoader classLoader,
-            final String className,
-            final Class<?> classBeingRedefined,
-            final ProtectionDomain protectionDomain,
-            final byte[] classFileBuffer)
-        throws IllegalClassFormatException
-    {
-        if (!profilerController.isActive()) {
-            logger.log(Level.FINEST, "Transformer inactive");
-            return classFileBuffer;
-        }
+	@Override
+	public byte[] transform(
+			final ClassLoader classLoader,
+			final String className,
+			final Class<?> classBeingRedefined,
+			final ProtectionDomain protectionDomain,
+			final byte[] classFileBuffer)
+					throws IllegalClassFormatException
+					{
+		if (!profilerController.isActive()) {
+			logger.log(Level.FINEST, "Transformer inactive");
+			return classFileBuffer;
+		}
 
-        logger.log(Level.FINEST, "Transformer active");
+		logger.log(Level.FINEST, "Transformer active");
 
-        for (final String blackListEntry : blackListedPackages) {
-            if (className.startsWith(blackListEntry)) {
-                logger.log(Level.FINEST, "Blacklisted package: " + className);
+		for (final String blackListEntry : blackListedPackages) {
+			if (className.startsWith(blackListEntry)) {
+				logger.log(Level.FINEST, "Blacklisted package: " + className);
 
-                return classFileBuffer;
-            }
-        }
+				return classFileBuffer;
+			}
+		}
 
-        if (className.startsWith("com/vmware/")) {
+		if (className.startsWith("com/vmware/")) {
 			return instrument(className, classFileBuffer);
 		}
 
-        if (!SYSTEM_CLASS_LOADER_FILTER.accept(classLoader)) {
-            logger.log(Level.FINEST, "ClassLoader not filtered: " + classLoader);
+		if (!SYSTEM_CLASS_LOADER_FILTER.accept(classLoader)) {
+			logger.log(Level.FINEST, "ClassLoader not filtered: " + classLoader);
 
-            return classFileBuffer;
-        }
+			return classFileBuffer;
+		}
 
-        return instrument(className, classFileBuffer);
-    }
+		return instrument(className, classFileBuffer);
+					}
 
 
-    private byte[] instrument(String className, byte[] classFileBuffer) {
+	private byte[] instrument(String className, byte[] classFileBuffer) {
 
-    	byte[] result = classFileBuffer;
+		byte[] result = classFileBuffer;
 
-        final ClassReader classReader = new ClassReader(classFileBuffer);
+		final ClassReader classReader = new ClassReader(classFileBuffer);
 
-        final ClassWriter classWriter = new ClassWriter(classReader, ClassWriter.COMPUTE_FRAMES | ClassWriter.COMPUTE_MAXS);
+		final ClassWriter classWriter = new ClassWriter(classReader, ClassWriter.COMPUTE_FRAMES | ClassWriter.COMPUTE_MAXS);
 
-        final InstrumentClassVisitor probeClassVisitor = new InstrumentClassVisitor(classWriter, className);
+		final InstrumentClassVisitor probeClassVisitor = new InstrumentClassVisitor(classWriter, className);
 
-        classReader.accept(probeClassVisitor, ClassReader.SKIP_DEBUG | ClassReader.EXPAND_FRAMES);
+		classReader.accept(probeClassVisitor, ClassReader.SKIP_DEBUG | ClassReader.EXPAND_FRAMES);
 
-        result = classWriter.toByteArray();
+		result = classWriter.toByteArray();
 
-        return result;
+		return result;
 
-    }
+	}
 }
